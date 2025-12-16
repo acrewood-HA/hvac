@@ -2,10 +2,11 @@ import requests
 from bs4 import BeautifulSoup
 import re
 import time
+import argparse
 
-def get_sensor_data(url='http://192.168.1.44/nodeconfig.html'):
+def get_sensor_data(url):
     """
-    Fetches temperature and humidity from the nodeconfig.html page.
+    Fetches temperature and humidity from the specified URL.
     Parses common HTML patterns for sensor data.
     """
     try:
@@ -59,16 +60,36 @@ def get_sensor_data(url='http://192.168.1.44/nodeconfig.html'):
 
 # Usage example with continuous monitoring
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="HVAC sensor data reader.")
+    parser.add_argument(
+        '--url',
+        type=str,
+        default='http://192.168.1.44/nodeconfig.html',
+        help='URL of the sensor node page.'
+    )
+    parser.add_argument(
+        '--interval',
+        type=int,
+        default=30,
+        help='Polling interval in seconds.'
+    )
+    args = parser.parse_args()
+
     while True:
-        data = get_sensor_data()
+        data = get_sensor_data(args.url)
         if data:
-            print(f"Temperature: {data['temperature']}°C")
-            print(f"Humidity: {data['humidity']}%")
-            if data['temperature'] is None:
-                print("Temperature not found - check raw_html_preview for format")
+            temp_str = f"{data['temperature']}°C" if data['temperature'] is not None else "N/A"
+            hum_str = f"{data['humidity']}%" if data['humidity'] is not None else "N/A"
+            print(f"Reading from {args.url}")
+            print(f"Temperature: {temp_str}")
+            print(f"Humidity: {hum_str}")
+
+            if data['temperature'] is None and data['humidity'] is None:
+                print("Could not parse sensor data. Raw HTML preview:")
                 print(data['raw_html_preview'])
         else:
-            print("Failed to retrieve data")
+
+            print(f"Failed to retrieve data from {args.url}")
         
         print("-" * 40)
-        time.sleep(30)  # Update every 30 seconds
+        time.sleep(args.interval)
