@@ -1,0 +1,59 @@
+# Add the following to your configuration.yaml or a dedicated sensors.yaml file.
+# 
+# This configuration creates a hidden "master" sensor that runs your script,
+# and then creates three individual, user-facing sensors from its data.
+
+# 1. The master sensor that runs the script to fetch the data.
+command_line:
+  - sensor:
+      name: HVAC Scraper
+      unique_id: hvac_scraper_sensor
+      # -------------------------------------------------------------------
+      # IMPORTANT: Update this path to be correct for your Home Assistant server.
+      # You may need to use 'python' instead of 'python3'.
+      # -------------------------------------------------------------------
+      command: "python3 /Users/jakewhite/Documents/GitHub/hvac/hvacreader.py"
+      scan_interval: 300 # Time in seconds between updates (e.g., 300 = 5 minutes)
+      # The main state of this sensor just tracks the last update time.
+      value_template: "{{ now().isoformat() }}"
+      # These are the keys we expect in the JSON output from the script.
+      json_attributes:
+        - "temperature"
+        - "humidity"
+        - "filter_remaining_time"
+
+# 2. The individual sensors that will appear in Home Assistant.
+template:
+  - sensor:
+      # --- Temperature Sensor ---
+      - name: "HVAC Temperature"
+        unique_id: hvac_temperature
+        state: "{{ state_attr('sensor.hvac_scraper', 'temperature') }}"
+        device_class: temperature
+        unit_of_measurement: "°C"
+        state_class: measurement
+        availability: >-
+          {{ states('sensor.hvac_scraper') not in ['unknown', 'unavailable'] and 
+             state_attr('sensor.hvac_scraper', 'temperature') is not none }}
+
+      # --- Humidity Sensor ---
+      - name: "HVAC Humidity"
+        unique_id: hvac_humidity
+        state: "{{ state_attr('sensor.hvac_scraper', 'humidity') }}"
+        device_class: humidity
+        unit_of_measurement: "%"
+        state_class: measurement
+        availability: >-
+          {{ states('sensor.hvac_scraper') not in ['unknown', 'unavailable'] and
+             state_attr('sensor.hvac_scraper', 'humidity') is not none }}
+
+      # --- Filter Time Sensor ---
+      - name: "HVAC Filter Remaining"
+        unique_id: hvac_filter_remaining
+        state: "{{ state_attr('sensor.hvac_scraper', 'filter_remaining_time') }}"
+        icon: mdi:filter-variant
+        unit_of_measurement: "hours"
+        state_class: measurement
+        availability: >-
+          {{ states('sensor.hvac_scraper') not in ['unknown', 'unavailable'] and
+             state_attr('sensor.hvac_scraper', 'filter_remaining_time') is not none }}
